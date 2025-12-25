@@ -92,6 +92,7 @@ const App: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [records, setRecords] = useState<ECNRecord[]>(INITIAL_DATA);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState<ECNRecord | undefined>(undefined);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -106,21 +107,36 @@ const App: React.FC = () => {
   const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.7));
   const handleResetZoom = () => setZoomLevel(1);
 
-  const addRecord = (newRecord: ECNRecord) => {
-    setRecords(prev => [newRecord, ...prev]);
+  const handleAddOrUpdateRecord = (record: ECNRecord) => {
+    setRecords(prev => {
+      const exists = prev.find(r => r.id === record.id);
+      if (exists) {
+        return prev.map(r => r.id === record.id ? record : r);
+      }
+      return [record, ...prev];
+    });
+    setSelectedRecord(undefined);
     setActiveTab('ledger');
   };
 
-  const updateRecord = (id: string, updatedFields: Partial<ECNRecord>) => {
-    setRecords(prev => prev.map(rec => rec.id === id ? { ...rec, ...updatedFields } : rec));
+  const handleTabChange = (tabId: string) => {
+    if (tabId === 'ecn-form') {
+      setSelectedRecord(undefined); // Reset when clicking "Create ECN" normally
+    }
+    setActiveTab(tabId);
+  };
+
+  const handleViewRecord = (record: ECNRecord) => {
+    setSelectedRecord(record);
+    setActiveTab('ecn-form');
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard': return <Dashboard records={records} />;
       case 'workflow': return <Workflow />;
-      case 'ecn-form': return <ECNForm onSubmit={addRecord} />;
-      case 'ledger': return <Ledger records={records} onUpdate={updateRecord} setRecords={setRecords} />;
+      case 'ecn-form': return <ECNForm onSubmit={handleAddOrUpdateRecord} initialRecord={selectedRecord} />;
+      case 'ledger': return <Ledger records={records} setRecords={setRecords} onOpenRecord={handleViewRecord} />;
       case 'instructions': return <Instructions />;
       default: return <Dashboard records={records} />;
     }
@@ -155,7 +171,7 @@ const App: React.FC = () => {
           {MENU_ITEMS.map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => handleTabChange(item.id)}
               className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all ${
                 activeTab === item.id 
                   ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-semibold shadow-sm shadow-blue-500/10' 
@@ -207,7 +223,7 @@ const App: React.FC = () => {
         <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 z-20 shadow-sm">
           <div className="flex items-center gap-4">
             <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
-              {MENU_ITEMS.find(i => i.id === activeTab)?.label}
+              {activeTab === 'ecn-form' && selectedRecord ? `查看 ECN: ${selectedRecord.docNumber}` : MENU_ITEMS.find(i => i.id === activeTab)?.label}
             </h2>
             <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-bold text-slate-500 uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -249,7 +265,6 @@ const App: React.FC = () => {
   );
 };
 
-// 额外的图标组件
 const User = ({ size, className }: { size: number, className?: string }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 

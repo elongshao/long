@@ -8,16 +8,16 @@ import {
   Trash2, 
   Table,
   Search,
-  Filter
+  ExternalLink
 } from 'lucide-react';
 
 interface Props {
   records: ECNRecord[];
-  onUpdate: (id: string, updatedFields: Partial<ECNRecord>) => void;
   setRecords: React.Dispatch<React.SetStateAction<ECNRecord[]>>;
+  onOpenRecord: (record: ECNRecord) => void;
 }
 
-const Ledger: React.FC<Props> = ({ records, setRecords }) => {
+const Ledger: React.FC<Props> = ({ records, setRecords, onOpenRecord }) => {
 
   const exportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(records, null, 2));
@@ -173,7 +173,14 @@ const Ledger: React.FC<Props> = ({ records, setRecords }) => {
               {records.map(record => (
                 <tr key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
                   <td className="px-6 py-5">
-                    <span className="font-mono text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md">{record.docNumber}</span>
+                    <button 
+                      onClick={() => onOpenRecord(record)}
+                      className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                      title="点击打开详情查看/编辑"
+                    >
+                      {record.docNumber}
+                      <ExternalLink size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
                   </td>
                   <td className="px-6 py-5">
                     <div className="max-w-xs">

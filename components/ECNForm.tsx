@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ECNRecord, 
   ECNStatus, 
@@ -18,7 +18,6 @@ import {
   Upload, 
   X, 
   FileText, 
-  AlertCircle, 
   Plus, 
   Trash2,
   ShieldCheck,
@@ -26,13 +25,14 @@ import {
   Users,
   Calendar,
   User,
-  // Added missing Settings import
-  Settings
+  Settings,
+  PlusCircle
 } from 'lucide-react';
-import { CATEGORIES, PURPOSES, SOURCES } from '../constants';
+import { SOURCES } from '../constants';
 
 interface Props {
   onSubmit: (record: ECNRecord) => void;
+  initialRecord?: ECNRecord;
 }
 
 const DEFAULT_FILES: AffectedFile[] = [
@@ -48,24 +48,45 @@ const DEFAULT_REVIEWERS: Reviewer[] = [
   { id: 'def-2', role: '制造工程部', name: '', opinion: '', date: new Date().toISOString().split('T')[0] },
 ];
 
-const ECNForm: React.FC<Props> = ({ onSubmit }) => {
+const getInitialState = (): Partial<ECNRecord> => ({
+  id: Date.now().toString(),
+  docNumber: `ECN-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
+  status: ECNStatus.INITIATED,
+  title: '',
+  source: '内部需求' as ChangeSource,
+  category: [],
+  purpose: [],
+  applyDate: new Date().toISOString().split('T')[0],
+  reviewers: DEFAULT_REVIEWERS,
+  trialResult: '待定' as '通过' | '失败' | '待定',
+  trialQuantity: 0,
+  customerApprovalRequired: false,
+  affectedFiles: DEFAULT_FILES,
+  attachments: [],
+  beforeChange: '',
+  afterChange: '',
+  feasibilityResult: '',
+  technicalImpact: '',
+  costImpact: '',
+  approver: '',
+  trialDate: '',
+  trialVerificationNote: ''
+});
+
+const ECNForm: React.FC<Props> = ({ onSubmit, initialRecord }) => {
   const [step, setStep] = useState(1);
   const [newFileName, setNewFileName] = useState('');
-  const [formData, setFormData] = useState<Partial<ECNRecord>>({
-    id: Date.now().toString(),
-    docNumber: `ECN-${new Date().getFullYear()}${(new Date().getMonth() + 1).toString().padStart(2, '0')}${new Date().getDate().toString().padStart(2, '0')}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`,
-    status: ECNStatus.INITIATED,
-    category: [],
-    purpose: [],
-    applyDate: new Date().toISOString().split('T')[0],
-    source: '内部需求' as ChangeSource,
-    reviewers: DEFAULT_REVIEWERS,
-    trialResult: '待定',
-    trialQuantity: 0,
-    customerApprovalRequired: false,
-    affectedFiles: DEFAULT_FILES,
-    attachments: []
-  });
+  const [formData, setFormData] = useState<Partial<ECNRecord>>(getInitialState());
+
+  useEffect(() => {
+    if (initialRecord) {
+      setFormData(initialRecord);
+      setStep(1);
+    } else {
+      setFormData(getInitialState());
+      setStep(1);
+    }
+  }, [initialRecord]);
 
   const STEPS = [
     { num: 1, label: '变更发起', desc: '基本信息与描述' },
@@ -162,9 +183,17 @@ const ECNForm: React.FC<Props> = ({ onSubmit }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.title) {
-      const finalData = { ...formData, status: ECNStatus.COMPLETED } as ECNRecord;
+      const finalData = { 
+        ...formData, 
+        status: ECNStatus.COMPLETED 
+      } as ECNRecord;
       onSubmit(finalData);
     }
+  };
+
+  const handleReset = () => {
+    setFormData(getInitialState());
+    setStep(1);
   };
 
   const renderAttachments = (stepNum: number) => (
@@ -209,31 +238,48 @@ const ECNForm: React.FC<Props> = ({ onSubmit }) => {
     <div className="max-w-5xl mx-auto pb-24">
       <div className="mb-8 flex items-center justify-between px-2">
         <div>
-          <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">工程变更通知单 (ECN)</h3>
+          <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">
+            {initialRecord ? '查看/编辑 ECN' : '工程变更通知单 (ECN)'}
+          </h3>
           <p className="text-slate-500 text-sm mt-1">IATF 16949 规范化变更执行表单</p>
         </div>
-        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-right">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">文档序列号</p>
-          <p className="font-mono text-blue-600 font-bold text-lg">{formData.docNumber}</p>
+        <div className="flex items-center gap-4">
+          {initialRecord && (
+            <button 
+              onClick={handleReset}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all font-bold text-sm border border-slate-200 dark:border-slate-700"
+            >
+              <PlusCircle size={16} /> 创建新 ECN
+            </button>
+          )}
+          <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm text-right">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">文档序列号</p>
+            <p className="font-mono text-blue-600 font-bold text-lg">{formData.docNumber}</p>
+          </div>
         </div>
       </div>
 
+      {/* Workflow Navigation */}
       <div className="flex items-center gap-2 mb-10 overflow-x-auto pb-4 scrollbar-hide no-wrap px-2">
         {STEPS.map((s) => (
           <React.Fragment key={s.num}>
-            <div className={`flex items-center gap-3 flex-shrink-0 transition-all duration-300 ${step === s.num ? 'scale-105' : 'opacity-70'}`}>
+            <button 
+              type="button"
+              onClick={() => setStep(s.num)}
+              className={`flex items-center gap-3 flex-shrink-0 transition-all duration-300 text-left outline-none ${step === s.num ? 'scale-105' : 'opacity-70 hover:opacity-100'}`}
+            >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm transition-all shadow-lg ${
                 step === s.num ? 'bg-blue-600 text-white shadow-blue-500/25 ring-4 ring-blue-500/10' : 
-                step > s.num ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
+                formData.status === ECNStatus.COMPLETED || step > s.num ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
               }`}>
-                {step > s.num ? <FileCheck size={20} /> : s.num}
+                {formData.status === ECNStatus.COMPLETED ? <FileCheck size={20} /> : s.num}
               </div>
               <div className="hidden lg:block min-w-[80px]">
                 <p className={`text-[11px] font-bold leading-none uppercase tracking-wider ${step === s.num ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`}>{s.label}</p>
                 <p className="text-[9px] text-slate-400 mt-1 font-medium">{s.desc}</p>
               </div>
-            </div>
-            {s.num < 7 && <div className={`w-6 h-px mx-1 ${step > s.num ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}></div>}
+            </button>
+            {s.num < 7 && <div className={`w-6 h-px mx-1 flex-shrink-0 ${step > s.num ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-800'}`}></div>}
           </React.Fragment>
         ))}
       </div>
@@ -517,7 +563,7 @@ const ECNForm: React.FC<Props> = ({ onSubmit }) => {
             </button>
           ) : (
             <button type="submit" className="flex items-center gap-2 px-12 py-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/25 font-bold">
-              <Save size={20} /> 完成变更并关闭单据
+              <Save size={20} /> {initialRecord ? '更新并保存变更' : '完成变更并关闭单据'}
             </button>
           )}
         </div>
