@@ -1,0 +1,5 @@
+{
+  "name": "Automotive Engineering Change Management (ECM) System",
+  "description": "A comprehensive solution for managing Engineering Change Notices (ECN) in automotive parts manufacturing, featuring workflow visualization, dashboards, ledger management, and multi-format exports.",
+  "requestFramePermissions": []
+}
